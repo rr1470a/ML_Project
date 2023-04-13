@@ -1,0 +1,104 @@
+---
+title: "Gender Violence Project"
+author: "Rebecca, Barbara, Adrian"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+```
+
+## Data Cleaning
+
+Uploading the main gender homicide data from UNODC: <https://dataunodc.un.org/dp-intentional-homicide-victims>
+
+```{r intentionalhomicide}
+setwd("C:/Users/beccarog13/OneDrive/American Univ/Courses/STAT 627 S2023/Project")
+
+UNODC_homicide <- read_xlsx("editted intentional homicide dataset.xlsx")
+
+UNODC_homicide_rates <- UNODC_homicide %>% 
+  filter(UNODC_homicide$`Unit of measurement` == "Rate per 100,000 population") 
+
+UNODC_homicide_summary <- UNODC_homicide_rates %>% 
+  group_by(Subregion, Year, Sex) %>%
+  summarise(mean_homiciderate = mean(VALUE))
+UNODC_homicide_summary
+
+UNODC_homicide_summary <- UNODC_homicide_summary %>% 
+  pivot_wider(1:2, names_from = Sex, values_from = mean_homiciderate)
+
+colnames(UNODC_homicide_summary) <- c("subregion", "year", "female_homicide_rates", 
+                                      "male_homicide_rates")
+```
+
+Uploading the violent and sexual crime data at:
+<https://dataunodc.un.org/dp-crime-violent-offences>
+```{r violentsexualcrime}
+UNODC_sexualcrimes <- read_xlsx("data_cts_violent_and_sexual_crime.xlsx", skip = 2)
+
+UNODC_sexualcrimes_rates <- UNODC_sexualcrimes %>% 
+  filter(UNODC_sexualcrimes$`Unit of measurement` == "Rate per 100,000 population")
+
+UNODC_sexualcrimes_summary <- UNODC_sexualcrimes_rates %>% 
+    group_by(Subregion, Year, Category) %>%
+  summarise(mean_rates = mean(VALUE))
+
+UNODC_sexualcrimes_summary <- UNODC_sexualcrimes_summary %>% 
+  pivot_wider(1:2, names_from = Category, values_from = mean_rates)
+
+colnames(UNODC_sexualcrimes_summary) <-  
+            c("subregion", "year", "sc_kidnapping",  "sc_robbery", "sc_serious_assault", 
+             "sc_sexual_violence", "sc_sv_rape", "sc_fear_distress", "sc_perp_partner_family",
+             "sc_sexual_exploitation", "sc_child_pornography", "sc_perp_known_other",
+             "sc_perp_stranger", "sc_perp_unknown", "sc_sv_sexual_assault", 
+             "sc_fear_disress_cyber","sc_child_porn_cyber", "sc_total","sc_other_violence")
+```
+Uploading firearms trafficking data at:
+<https://dataunodc.un.org/dp-firearms-arms-seized>
+```{r firearms}
+UNODC_firearms <- read_xlsx("data_iafq_firearms_trafficking.xlsx", skip = 2)
+
+UNODC_firearms_summary <- UNODC_firearms %>% 
+  group_by(Subregion, Year, Indicator) %>%
+  summarise(mean_firearmtrafficking_rates = mean(VALUE))
+
+UNODC_firearms_summary <- UNODC_firearms_summary %>% 
+  pivot_wider(1:2, names_from = Indicator, values_from = mean_firearmtrafficking_rates)
+
+colnames(UNODC_firearms_summary) <- c("subregion", "year", "fire_ammunition", 
+                                      "fire_arms_found", "fire_arms seized", 
+                                      "fire_arms_surrendered", "fire_cases_seizures",
+                                      "fire_parts_seized", "fire_individuals_arrested",
+                                      "fire_individuals_trafficking", "fire_individuals_convicted",
+                                      "fire_individuals_prosecuted", "fire_individuals_targeted")
+```
+
+
+
+## Merging Data
+
+Merging the intentional homicide data with the sexual crimes data: 
+[sexual crimes data is marked with an sc_]
+```{r merging1}
+UNODC_summary <- UNODC_homicide_summary %>% 
+  full_join(UNODC_sexualcrimes_summary, subregion = subregion, year = year)
+```
+Merging the firearm trafficking data:
+[firearm trafficking data is marked with fire_]
+```{r merging2}
+UNODC_summary <- UNODC_summary %>% 
+  full_join(UNODC_firearms_summary, subregion = subregion, year = year)
+```
+Saving the Data:
+```{r output}
+#saving summary data in a file
+library(writexl)
+write_xlsx(UNODC_summary, path = "C:/Users/beccarog13/OneDrive/American Univ/Courses/STAT 627 S2023/Project/UNODC_summary.xlsx")
+```
+
+
