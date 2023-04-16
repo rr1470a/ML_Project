@@ -78,7 +78,25 @@ colnames(UNODC_firearms_summary) <- c("subregion", "year", "fire_ammunition",
                                       "fire_individuals_prosecuted", "fire_individuals_targeted")
 ```
 
+Uploading arrests data at:
+<https://dataunodc.un.org/dp-cjs-persons-convicted>
+```{r arrests}
+UNODC_arrests <- read_xlsx("data_cts_access_and_functioning_of_justice_arrests.xlsx", skip = 2)
 
+UNODC_arrests_rates <- UNODC_arrests%>% 
+  filter(UNODC_arrests$`Unit of measurement` == "Rate per 100,000 population")
+
+UNODC_arrests_summary <- UNODC_arrests_rates %>% 
+  group_by(Subregion, Year, Indicator) %>%
+  summarise(mean_firearmtrafficking_rates = mean(VALUE))
+
+UNODC_arrests_summary <- UNODC_arrests_summary %>% 
+  pivot_wider(1:2, names_from = Indicator, values_from = mean_firearmtrafficking_rates)
+
+colnames(UNODC_arrests_summary) <- c("subregion", "year", "criminal_justice_personnel", 
+                                      "persons_before_courts", "convicted", 
+                                      "prosecuted", "arrested_cautioned_suspected")
+```
 
 ## Merging Data
 
@@ -94,6 +112,17 @@ Merging the firearm trafficking data:
 UNODC_summary <- UNODC_summary %>% 
   full_join(UNODC_firearms_summary, subregion = subregion, year = year)
 ```
+Merging the arrests and justice system data: 
+```{r merging3}
+UNODC_summary <- UNODC_summary %>% 
+  full_join(UNODC_arrests_summary, subregion = subregion, year = year)
+
+#16 subregions - no data merging issues
+UNODC_summary %>% 
+  group_by(subregion) %>% 
+  summarise(count= n())
+```
+
 Saving the Data:
 ```{r output}
 #saving summary data in a file
